@@ -1,102 +1,125 @@
 import React, { useEffect, useState } from 'react';
-import { Alert ,StyleSheet, Text, View, TextInput } from 'react-native';
-import { db } from '@/utils/firebase' ;
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { Alert, StyleSheet, Text, View, TextInput, ScrollView } from 'react-native';
+import { db } from '@/utils/firebase';
+import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
 import CustomButton from '@/components/customButton';
 
-interface Dados{
-    id: string;
-    name: string;
-    description: string;
-
+interface Alternativa {
+  id: string;
+  texto: string;
+  correta: boolean;
 }
 
-export default function CadastroItem() {
-    const router = useRouter();
-    const [dados, setDados] = useState<Dados[]>([]);
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
-    const [editId, setEditId] = useState<string | null>(null);
+interface Questao {
+  id: string;
+  enunciado: string;
+  alternativas: Alternativa[];
+}
 
-    useEffect(() => {
-        const fetchData = async() => {
-            try{
-                const querySnapShot = await getDocs(collection(db, 'questoes'));
-                const items: Dados[] = [];
-                querySnapShot.forEach((doc) => {
-                    items.push({id: doc.id, ...doc.data() } as Dados);
-                });
-                setDados(items);
-            } catch (error) {
-                console.error('Error fetching data', error);
-            };
-        };
-        fetchData();
-    }, []);
+export default function Home () {
+  const router = useRouter();
+  const [questoes, setQuestoes] = useState<Questao[]>([]);
+  const [enunciado, setEnunciado] = useState('');
+  const [alternativas, setAlternativas] = useState<Alternativa[]>([
+    { id: '1', texto: '', correta: false },
+    { id: '2', texto: '', correta: false },
+    { id: '3', texto: '', correta: false },
+    { id: '4', texto: '', correta: false },
+  ]);
 
-    const handleAddItem = async () => {
-        if (name ==='' || description ===''){
-            Alert.alert('Erro', 'Por favor preencha os campos');
-            return;
-        }
-        try {
-            if (isEditing && editId) {
-                const docRef = doc(db, 'questoes', editId);
-                await updateDoc(docRef, {
-                    name,
-                    description,
-                });
-                setDados(dados.map(item => item.id === editId ? { id: editId, name, description } : item));
-                setIsEditing(false);
-                setEditId(null);
-            }else {
-                const docRef = await addDoc(collection(db, 'questoes'), {
-                    name,
-                    description,
-                });
-                setDados([...dados, { id: docRef.id, name, description }]);
-            }
-        setName('');
-        setDescription('');
-        Alert.alert('Sucesso', 'Item adicionado/atualizado com sucesso');
-        router.push('/');
-        }catch (error) {
-            console.error('Erro ao adicionar/atualizar:', error);
-        }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'questoes'));
+        const items: Questao[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() } as Questao);
+        });
+        setQuestoes(items);
+      } catch (error) {
+        console.error('Error fetching data', error);
+      }
     };
-    return(
-      <View style={styles.container} >
-      <Text style={styles.title}>Cadastro de quest</Text>
+    fetchData();
+  }, []);
+
+  const handleAddQuestao = async () => {
+    if (enunciado === '' || alternativas.some((alt) => alt.texto === '')) {
+      Alert.alert('Erro', 'Por favor preencha todos os campos');
+      return;
+    }
+
+    try {
+      const docRef = await addDoc(collection(db, 'questoes'), {
+        enunciado,
+        alternativas,
+      });
+      setQuestoes([...questoes, { id: docRef.id, enunciado, alternativas }]);
+      setEnunciado('');
+      setAlternativas([
+        { id: '1', texto: '', correta: false },
+        { id: '2', texto: '', correta: false },
+        { id: '3', texto: '', correta: false },
+        { id: '4', texto: '', correta: false },
+      ]);
+      Alert.alert('Sucesso', 'Questão cadastrada com sucesso');
+      router.push('/tela')
+    } catch (error) {
+      console.error('Erro ao adicionar questão:', error);
+      Alert.alert('Erro', 'Não foi possível adicionar a questão');
+    }
+  };
+
+  const handleAlternativaChange = (index: number, texto: string) => {
+    const novasAlternativas = [...alternativas];
+    novasAlternativas[index].texto = texto;
+    setAlternativas(novasAlternativas);
+  };
+
+  const handleCorretaChange = (index: number) => {
+    const novasAlternativas = alternativas.map((alt, i) => ({
+      ...alt,
+      correta: i === index,
+    }));
+    setAlternativas(novasAlternativas);
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Cadastro de Questão</Text>
       <View style={styles.section}>
-        <Text style={styles.label}>Nome do item*</Text>
-        <TextInput style={styles.input} placeholder="Texto" value={name} onChangeText={setName} />
+        <Text style={styles.label}>Enunciado*</Text>
+        <TextInput style={styles.input} placeholder="Texto da questão" value={enunciado} onChangeText={setEnunciado} />
       </View>
-      <View style={styles.section}>
-        <Text style={styles.label}>Descrição*</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Descrição"
-          multiline
-          numberOfLines={4}
-          value={description}
-          onChangeText={setDescription}/>
-      </View>
-      <CustomButton func={handleAddItem} title='Cadastrar quest'/>
-    </View>
+      {alternativas.map((alternativa, index) => (
+        <View key={alternativa.id} style={styles.section}>
+          <Text style={styles.label}>Alternativa {index + 1}*</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={`Texto da alternativa ${index + 1}`}
+            value={alternativa.texto}
+            onChangeText={(texto) => handleAlternativaChange(index, texto)}
+          />
+          <CustomButton
+            title={alternativa.correta ? "Correta" : "Marcar como correta"}
+            func={() => handleCorretaChange(index)}
+          />
+        </View>
+      ))}
+      <CustomButton func={handleAddQuestao} title='Cadastrar Questão' />
+    </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
     container: {
       flexGrow: 1,
-      padding: 20,
+      paddingHorizontal: 10,
       backgroundColor: '#FFFFFF',
     },
     title: {
       fontSize: 28,
-      color: '#4CAF50',
+      color: 'blue',
       textAlign: 'center',
       marginVertical: 20,
       fontWeight: 'bold',
@@ -104,17 +127,17 @@ const styles = StyleSheet.create({
     section: {
       marginBottom: 20,
       borderBottomWidth: 1,
-      borderBottomColor: '#4CAF50',
+      borderBottomColor: 'blue',
       paddingBottom: 10,
     },
     label: {
       fontSize: 16,
-      color: '#4CAF50',
+      color: 'black',
       marginBottom: 5,
     },
     input: {
       borderWidth: 1,
-      borderColor: '#4CAF50',
+      borderColor: 'blue',
       borderRadius: 5,
       padding: 10,
       marginBottom: 10,

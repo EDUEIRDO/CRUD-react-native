@@ -1,0 +1,95 @@
+import React, { useEffect, useState } from 'react';
+import { ScrollView ,StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { db } from '@/utils/firebase' ;
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import CustomButton from '@/components/customButton';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+interface Alternativa {
+  id: string;
+  texto: string;
+  correta: boolean;
+}
+
+// Agora você pode usar a interface Alternativa
+interface Questao {
+  id: string;
+  enunciado: string;
+  alternativas: Alternativa[];
+}
+
+interface Dados {
+  id: string;
+  name: string;
+  description: string;  // Representará as alternativas como string JSON
+}
+
+
+
+export default function QuestaoDetalhe() {
+  const router = useRouter();
+  const [questoes, setQuestoes] = useState<Questao[]>([]);
+  const [alternativas, setAlternativas] = useState<Alternativa[]>([
+    { id: '1', texto: '', correta: false },
+    { id: '2', texto: '', correta: false },
+    { id: '3', texto: '', correta: false },
+    { id: '4', texto: '', correta: false },
+  ]);
+  const { id, enunciado } = useLocalSearchParams();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'questoes'));
+        const items: Questao[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() } as Questao);
+        });
+        console.log('Questões carregadas:', items); // Adicione este log
+        setQuestoes(items);
+      } catch (error) {
+        console.error('Error fetching data', error);
+      }
+    };
+    fetchData();
+  }, []);
+  
+
+  const handleEditItem = () => {
+    router.push({ pathname: '/edit', params: { id } });
+  };
+  const handleDeleteItem = async () => {
+    try {
+      await deleteDoc(doc(db, 'questoes', id as string));
+      Alert.alert('Sucesso', 'Questão excluída com sucesso');
+      router.back();
+    } catch (error) {
+      console.error('Erro ao excluir questão:', error);
+      Alert.alert('Erro', 'Não foi possível excluir a questão');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Detalhes da Questão</Text>
+      <Text style={styles.enunciado}>{enunciado}</Text>
+      <CustomButton title="Editar" func={handleEditItem} />
+      <CustomButton title="Excluir" func={handleDeleteItem} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 64,
+    fontWeight: 'bold',
+  },
+  enunciado: {
+    fontSize: 18,
+    marginBottom: 20,
+  },
+});

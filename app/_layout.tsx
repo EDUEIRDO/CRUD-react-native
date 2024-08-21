@@ -1,39 +1,40 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import React, { useState } from 'react';
+import { StatusBar, Platform } from 'react-native';
+import { createStackNavigator } from '@react-navigation/stack';
+import Home from './index';
+import Tela from './tela';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+const Stack = createStackNavigator();
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+function Layout() {
+//  const [home, setHome] = useState(true);
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+  StatusBar.setBarStyle('default');
+/*  if (Platform.OS === 'android') StatusBar.setBackgroundColor('#fff');
+  if (home) {
+    StatusBar.setHidden(true);
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor('#fff');
+      StatusBar.setBarStyle('light-content');
     }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
+  } else {
+    StatusBar.setHidden(false);
   }
-
+*/
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack initialRouteName='index'>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen name='index' />
-        <Stack.Screen name='questPage' />
-      </Stack>
-    </ThemeProvider>
+    <Stack.Navigator>
+      <Stack.Screen
+        name='index'
+        component={Home}
+      />
+      <Stack.Screen
+        name='tela'
+        component={Tela}
+      />
+    </Stack.Navigator>
+  
+    
   );
 }
+
+export default Layout;

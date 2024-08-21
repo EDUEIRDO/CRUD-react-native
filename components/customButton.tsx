@@ -16,7 +16,7 @@ export default function CustomButton({title, func}: CustomButtonProps) {
 
 const styles = StyleSheet.create({
     Button: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#477bbf',
         paddingVertical: 10,
         paddingHorizontal: 40,
         borderRadius: 5,
